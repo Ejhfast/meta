@@ -7,7 +7,7 @@ setup(
   author = 'Ethan Fast',
   author_email = 'ejhfast@gmail.com',
   url = 'https://github.com/Ejhfast/meta', # use the URL to the github repo
-  download_url = 'https://github.com/Ejhfast/meta/tarball/0.1', # I'll explain this in a second
+  download_url = 'https://github.com/Ejhfast/meta/tarball/0.3', # I'll explain this in a second
   keywords = ['DSL', 'code sharing', 'metaprogramming'], # arbitrary keywords
   classifiers = [],
 )
