@@ -14,5 +14,6 @@ setup(
           'numpy',
           'dill',
           'requests',
+          'multiprocess'
   ]
 )
