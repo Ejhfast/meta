@@ -6,12 +6,22 @@ import numpy as np
 import time
 from .timeout import timeout
 import types
+import re
 
 # list all imported modules, doesn't work with "as" or "from"
-def list_imports():
+# optionally filter by their presence in src
+def list_imports(src=None):
+    imps = set()
     for name, val in globals().items():
         if isinstance(val, types.ModuleType):
-            yield val.__name__
+            name = val.__name__
+            if src:
+                if re.compile(name+"\.").search(src):
+                    imps.add(name)
+                else:
+                    continue
+            imps.add(name)
+    return list(imps)
 
 # see if meta function is currently undefined
 def is_func_undefined(source : str) -> bool:

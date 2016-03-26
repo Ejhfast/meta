@@ -20,6 +20,8 @@ def average_list_difference(l1,l2):
 
 average_list_difference([1,2,3],[3,4,5])
 
+print(average_list_difference.__meta_imports__)
+
 count_words("this is a test document")
 
 print("Meta id: {}".format(add_numbers.__meta_id__))

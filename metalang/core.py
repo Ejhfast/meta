@@ -113,11 +113,13 @@ class Meta:
         return bind_decorator
 
 
-    def __call__(self, d_str: str, imports=None, parent=None):
-        if not imports:
-            imports = util.list_imports()
+    def __call__(self, d_str, imports=None, parent=None):
         def real_dec(func):
+            imports_copy = imports
             src = "".join(inspect.getsourcelines(func)[0][1:])
+            if imports_copy == None:
+                imports_copy = util.list_imports(src)
+            print(imports_copy)
             f_name = func.__name__
             is_undef = util.is_func_undefined(src)
             annote = {k:util.pp_type(v) for k,v in func.__annotations__.items()}
@@ -126,7 +128,7 @@ class Meta:
             t_sig = " -> ".join(arg_type+[ret_type])
             # possibly I want to mark when we're recording input fed to a magically shifted function
             snippet_data = {
-                "source":src, "imports":imports,
+                "source":src, "imports":imports_copy,
                 "name":f_name, "type":t_sig,
                 "undefined":is_undef, "doc":d_str,
                 "parent":parent,
@@ -253,6 +255,7 @@ class MetaFunction():
         self.__meta_doc__ = data["doc"]
         self.__meta_type__ = data["type"]
         self.__meta_source__ = data["source"]
+        self.__meta_imports__ = imports
         if "for_inference" in data:
             self.__meta_for_inference__ = data["for_inference"]
         else:
