@@ -2,7 +2,6 @@ from typing import List,Dict,Any,Tuple,Set,Callable,Union
 import itertools as it
 import dill
 import numpy as np
-from scipy.stats import ttest_ind
 import numpy as np
 import time
 from .timeout import timeout

@@ -10,4 +10,12 @@ setup(
   download_url = 'https://github.com/Ejhfast/meta/tarball/0.3', # I'll explain this in a second
   keywords = ['DSL', 'code sharing', 'metaprogramming'], # arbitrary keywords
   classifiers = [],
+  install_requires=[
+          'numpy',
+          'dill',
+          'inspect',
+          'bson',
+          'requests',
+          'getpass'
+  ]
 )
