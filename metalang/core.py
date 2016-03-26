@@ -79,8 +79,8 @@ class WebCache:
 
 class Meta:
 
-    def __init__(self, userid="global", user=None, sandbox=False, debug=False):
-        self.cache = WebCache("http://127.0.0.1:8000")
+    def __init__(self, userid="global", user=None, sandbox=False, debug=False, backend_url="https://meta-backend.herokuapp.com"):
+        self.cache = WebCache(backend_url)
         self.__framework_test__ = sandbox
         self.debug = debug
         if user:
