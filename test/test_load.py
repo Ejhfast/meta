@@ -23,3 +23,7 @@ try: fibonacci("s")
 except: pass
 
 print("bugs",fibonacci.bugs())
+
+create_dict_from_object = meta.load("http://meta-lang.org/snippet/56ee4528c0cb8f7470fbafa6")
+
+print(create_dict_from_object(fibonacci))
