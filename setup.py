@@ -2,7 +2,7 @@ from distutils.core import setup
 setup(
   name = 'metalang',
   packages = ['metalang'], # this must be the same as the name above
-  version = '0.45',
+  version = '0.46',
   description = 'A domain specific language that enables powerful code sharing',
   author = 'Ethan Fast',
   author_email = 'ejhfast@gmail.com',
@@ -15,6 +15,7 @@ setup(
           'dill',
           'pymongo',
           'requests',
+          'typing',
           'multiprocess'
   ]
 )
