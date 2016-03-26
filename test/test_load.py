@@ -1,5 +1,6 @@
 from context import Meta
 from collections import Counter
+import numpy
 
 meta = Meta()
 
@@ -11,6 +12,13 @@ def add_numbers(x,y):
 def count_words(doc):
     words = [w.lower() for w in doc.split()]
     return Counter(words)
+
+@meta("compute difference in average between lists")
+def average_list_difference(l1,l2):
+    l1_avg, l2_avg = [numpy.average(x) for x in [l1,l2]]
+    return l1_avg - l2_avg
+
+average_list_difference([1,2,3],[3,4,5])
 
 count_words("this is a test document")
 

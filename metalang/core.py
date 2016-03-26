@@ -113,7 +113,9 @@ class Meta:
         return bind_decorator
 
 
-    def __call__(self, d_str: str, imports=[], parent=None):
+    def __call__(self, d_str: str, imports=None, parent=None):
+        if not imports:
+            imports = util.list_imports()
         def real_dec(func):
             src = "".join(inspect.getsourcelines(func)[0][1:])
             f_name = func.__name__

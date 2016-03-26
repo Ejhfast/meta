@@ -5,6 +5,13 @@ import numpy as np
 import numpy as np
 import time
 from .timeout import timeout
+import types
+
+# list all imported modules, doesn't work with "as" or "from"
+def list_imports():
+    for name, val in globals().items():
+        if isinstance(val, types.ModuleType):
+            yield val.__name__
 
 # see if meta function is currently undefined
 def is_func_undefined(source : str) -> bool:
