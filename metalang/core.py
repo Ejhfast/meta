@@ -113,7 +113,7 @@ class Meta:
         return bind_decorator
 
 
-    def doc(self, d_str: str, imports=[]):
+    def __call__(self, d_str: str, imports=[], parent=None):
         def real_dec(func):
             src = "".join(inspect.getsourcelines(func)[0][1:])
             f_name = func.__name__
@@ -127,6 +127,7 @@ class Meta:
                 "source":src, "imports":imports,
                 "name":f_name, "type":t_sig,
                 "undefined":is_undef, "doc":d_str,
+                "parent":parent,
                 "created_at":datetime.now(),
                 "file":sys.modules[func.__module__].__file__,
                 "user":self.user,

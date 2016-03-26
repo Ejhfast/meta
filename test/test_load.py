@@ -1,11 +1,21 @@
 from context import Meta
+from collections import Counter
 
 meta = Meta()
 
-@meta.doc("add two numbers")
-def add_numbers(x,y): return x + y
+@meta("add two numbers")
+def add_numbers(x,y):
+    return x + y
+
+@meta("count words in a text document", imports=[{"from":"collections", "import":"Counter"}])
+def count_words(doc):
+    words = [w.lower() for w in doc.split()]
+    return Counter(words)
+
+count_words("this is a test document")
 
 print("Meta id: {}".format(add_numbers.__meta_id__))
+print("Meta id: {}".format(count_words.__meta_id__))
 
 reload_add_numbers = meta.load(add_numbers.__meta_id__)
 

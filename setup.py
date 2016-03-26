@@ -2,18 +2,18 @@ from distutils.core import setup
 setup(
   name = 'metalang',
   packages = ['metalang'], # this must be the same as the name above
-  version = '0.42',
+  version = '0.45',
   description = 'A domain specific language that enables powerful code sharing',
   author = 'Ethan Fast',
   author_email = 'ejhfast@gmail.com',
   url = 'https://github.com/Ejhfast/meta', # use the URL to the github repo
-  download_url = 'https://github.com/Ejhfast/meta/tarball/0.4',
+  download_url = 'https://github.com/Ejhfast/meta/tarball/0.45',
   keywords = ['DSL', 'code sharing', 'metaprogramming'], # arbitrary keywords
   classifiers = [],
   install_requires=[
           'numpy',
           'dill',
-          'bson',
+          'pymongo',
           'requests',
           'multiprocess'
   ]
