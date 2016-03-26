@@ -2,7 +2,7 @@ from distutils.core import setup
 setup(
   name = 'metalang',
   packages = ['metalang'], # this must be the same as the name above
-  version = '0.1',
+  version = '0.2',
   description = 'A domain specific language that enables powerful code sharing',
   author = 'Ethan Fast',
   author_email = 'ejhfast@gmail.com',
@@ -13,9 +13,6 @@ setup(
   install_requires=[
           'numpy',
           'dill',
-          'inspect',
-          'bson',
           'requests',
-          'getpass'
   ]
 )
