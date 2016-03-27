@@ -29,6 +29,7 @@ class WebCache:
 
     def record_function(self, snippet_data):
         resp = requests.post(self.path + "/record_function", data={"bson":bson_dumps(snippet_data)})
+        print(resp)
         return resp.json()
 
     def record_call(self, runtime_info):
@@ -104,14 +105,17 @@ class Meta:
                                  "exception_type":type(e).__name__, "exception":Binary(dill.dumps(e))}
                     self.cache.record_bug(bad_input)
                     raise e
-                params = tuple(list(args)+[v])
-                sig = " -> ".join([util.pp_type(x) for x in util.fancy_type(params).__tuple_params__])
-                # args_ = [a if type(a).__name__ != 'generator' else type(a) for a in args]
-                # v_ = v if type(v).__name__ != 'generator' else type(v)
-                runtime = {"snippet_id":id, "call":Binary(dill.dumps((args,v))),"time_running":t2-t1,"file":__file__,
-                       "user":self.user,"time":datetime.now(),"type":sig, "imports":imports}
-                self.cache.record_call(runtime)
+                if random.randint(0,func_wrapper.called) == 0:
+                    params = tuple(list(args)+[v])
+                    sig = " -> ".join([util.pp_type(x) for x in util.fancy_type(params).__tuple_params__])
+                    # args_ = [a if type(a).__name__ != 'generator' else type(a) for a in args]
+                    # v_ = v if type(v).__name__ != 'generator' else type(v)
+                    runtime = {"snippet_id":id, "call":Binary(dill.dumps((args,v))),"time_running":t2-t1,"file":__file__,
+                           "user":self.user,"time":datetime.now(),"type":sig, "imports":imports}
+                    self.cache.record_call(runtime)
+                func_wrapper.called += 1
                 return v
+            func_wrapper.called = 0
             return func_wrapper
         return bind_decorator
 
