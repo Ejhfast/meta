@@ -29,7 +29,6 @@ class WebCache:
 
     def record_function(self, snippet_data):
         resp = requests.post(self.path + "/record_function", data={"bson":bson_dumps(snippet_data)})
-        print(resp)
         return resp.json()
 
     def record_call(self, runtime_info):
@@ -247,6 +246,7 @@ class MetaFunction():
         self.meta = meta_conn
         self.duplicates = None
         self.__meta_backoff__ = False
+        self.__show_search__ = False
         if not data:
             data = self.meta.cache.id2func(id_)
         src, func_name, imports = [data[k] for k in ["source","name","imports"]]
@@ -258,6 +258,8 @@ class MetaFunction():
                 pass
             else:
                 raise e
+        if "show_search" in data and data["show_search"] == True:
+            self.__show_search__ = True
         self.__meta_doc__ = data["doc"]
         self.__meta_type__ = data["type"]
         self.__meta_source__ = data["source"]
@@ -300,7 +302,11 @@ class MetaFunction():
                     pass
             raise Exception("No backoff function could save this input")
         else:
-            return self.instrument_f(*args,**kwargs)
+            ret = self.instrument_f(*args,**kwargs)
+            if self.__show_search__ == False:
+                self.meta.cache.update_snippet(self.__meta_id__, {"show_search":True})
+                self.__show_search__ = True
+            return ret
 
     def get_dynamic_type_sig(self, _expand_ = True, recompute=False):
         # what if no inputs or no calls?
