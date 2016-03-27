@@ -318,8 +318,8 @@ class MetaFunction():
             return 0
         pass_, fail_ = 0.0, 0.0
         try:
-            func_1 = timeout_dumb(2)(dill.dumps(self.sandbox_io,recurse=True))
-            func_2 = timeout_dumb(2)(dill.dumps(other_meta_func.sandbox_io,recurse=True))
+            func_1 = timeout_dumb(3)(dill.dumps(self.sandbox_io,recurse=True))
+            func_2 = timeout_dumb(3)(dill.dumps(other_meta_func.sandbox_io,recurse=True))
         except Exception as e:
             print(e,file=sys.stderr)
             return 0
@@ -378,15 +378,20 @@ class MetaFunction():
             else:
                 return []
 
-    def optimize_run(*args,k="average run time"):
-        self=args[0]
-        dups = args[0].find_duplicates()
+    def optimize_run(self,k="average run time"):
+        dups = self.find_duplicates()
         rank = sorted(dups,key=lambda x: x.analytics()[k])
+        print(rank)
         if len(rank)>0 and rank[0].analytics()[k] < self.analytics()[k]:
             print("Note: optimizing with {}".format(rank[0].__name__),file=sys.stderr)
-            return rank[0](*args[1:])
+            selected = rank[0]
         else:
-            return self(*args[1:])
+            selected = self
+        def opt(*args,**kwargs):
+            return selected(*args,**kwargs)
+        return opt
+
+
 
     def analytics(self):
         execution = self.meta.cache.id2execution(self.__meta_id__)

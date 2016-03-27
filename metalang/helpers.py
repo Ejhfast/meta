@@ -1,4 +1,4 @@
-from typing import List,Dict,Any,Tuple,Set,Callable,Union
+from .typing import List,Dict,Any,Tuple,Set,Callable,Union
 import itertools as it
 import dill
 import numpy as np
@@ -42,12 +42,13 @@ def fancy_type(o):
         return Set[Union[tuple([fancy_type(t_) for t_ in o])]]
     if type(o) == type(fancy_type):
         return Callable[...,Any]
-    else: return type(o)
+    else:
+        return type(o)
 
 # remove 'typing.' when printing types
 def pp_type(t):
-    if type(t).__module__ == 'typing':
-        return str(t).replace("typing.","")
+    if type(t).__module__ == 'metalang.typing':
+        return str(t).replace("metalang.typing.","")
     elif t == None:
         return "None"
     else:
@@ -128,7 +129,9 @@ def type_to_string(params, __expand__=True):
     p_sig = []
     for s in expanded:
         if type(s) == type(Tuple):
+            print(s)
             p_sig.append(" -> ".join([pp_type(x) for x in s.__tuple_params__]))
+            print(p_sig[-1])
     return p_sig
 
 # time a function and prepend time to return value
