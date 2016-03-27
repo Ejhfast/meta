@@ -11,6 +11,7 @@ from bson.json_util import loads as bson_loads
 from bson.json_util import dumps as bson_dumps
 import re
 import sys
+import os
 from .timeout import timeout, timeout_dumb
 from collections import defaultdict,Counter
 import random
@@ -40,7 +41,7 @@ class WebCache:
         requests.post(self.path + "/clear_runtime", data={"id":id_})
 
     def similar_funcs(self, text, typ=None):
-        resp = requests.get(self.path + "/similar_funcs", params={"text":text, "type":typ})
+        resp = requests.get(self.path + "/similar_funcs", json={"text":text, "type":typ})
         # resp is a list of snippet json data
         return bson_loads(resp.text)
 
@@ -83,6 +84,8 @@ class Meta:
         self.cache = WebCache(backend_url)
         self.__framework_test__ = sandbox
         self.debug = debug
+        self.optimize = bool(os.environ.get("OPT", False))
+        self.backoff = bool(os.environ.get("AUTO_PATCH", False))
         if user:
             self.user = user
         else:
@@ -119,7 +122,6 @@ class Meta:
             src = "".join(inspect.getsourcelines(func)[0][1:])
             if imports_copy == None:
                 imports_copy = util.list_imports(src)
-            print(imports_copy)
             f_name = func.__name__
             is_undef = util.is_func_undefined(src)
             annote = {k:util.pp_type(v) for k,v in func.__annotations__.items()}
@@ -279,18 +281,22 @@ class MetaFunction():
         # args[0] = self?
         self = args[0]
         args = args[1:]
+        if self.meta.optimize:
+            return self.optimize()
         if self.meta.__framework_test__:
             return self.instrument_sandbox(*args,**kwargs)
-        if not self.__meta_backoff__:
-            return self.instrument_f(*args,**kwargs)
-        else:
+        if self.meta.backoff or self.__meta_backoff__:
             self.find_duplicates()
             for d in [self]+self.duplicates:
                 try:
-                    return d.instrument_f(*args,**kwargs)
+                    new_ret = d.instrument_f(*args,**kwargs)
+                    print("Warning: Auto-patched {} with {}".format(self.__name__, d.__name__))
+                    return new_ret
                 except:
                     pass
             raise Exception("No backoff function could save this input")
+        else:
+            return self.instrument_f(*args,**kwargs)
 
     def get_dynamic_type_sig(self, _expand_ = True, recompute=False):
         # what if no inputs or no calls?
@@ -312,14 +318,15 @@ class MetaFunction():
                 return self.__meta_dynamic_type__
 
     def test_as(self, other_meta_func, debug=False, fail_count=float("inf"), io_skip=False):
-        ex1, ex2 = [self.meta.cache.id2execution(x.__meta_id__) for x in [self,other_meta_func]]
-        execution = set([x["call"] for x in list(ex1)+list(ex2)])
+        # ex1, ex2 = [self.meta.cache.id2execution(x.__meta_id__) for x in [self,other_meta_func]]
+        exs = self.meta.cache.id2execution(self.__meta_id__)
+        execution = set([x["call"] for x in exs])#list(ex1)+list(ex2)])
         if len(execution) == 0:
             return 0
         pass_, fail_ = 0.0, 0.0
         try:
-            func_1 = timeout_dumb(3)(dill.dumps(self.sandbox_io,recurse=True))
-            func_2 = timeout_dumb(3)(dill.dumps(other_meta_func.sandbox_io,recurse=True))
+            func_1 = timeout_dumb(2)(dill.dumps(self.sandbox_io,recurse=True))
+            func_2 = timeout_dumb(2)(dill.dumps(other_meta_func.sandbox_io,recurse=True))
         except Exception as e:
             print(e,file=sys.stderr)
             return 0
@@ -340,7 +347,7 @@ class MetaFunction():
                     fail_ += 1.0
                     continue
                 if not util.equal_fvals(v1,v2):
-                    if debug: print("Failed test {} with args: returned {} but expected {}".format(i,v1,v2))
+                    if debug: print("Failed test {} with args {}: returned {} but expected {}".format(i,args,v1,v2))
                     fail_ += 1.0
                 else:
                     if debug: print("Passed test {}, {}".format(i,args))
@@ -358,7 +365,7 @@ class MetaFunction():
         else:
             snippet = self.meta.cache.id2func(self.__meta_id__)
             if "for_inference" in snippet and snippet["for_inference"] and len(snippet["for_inference"]) > 0:
-                tp = snippet["for_inference"][-1]
+                tp = snippet["for_inference"]
                 matches = self.meta.cache.similar_funcs(snippet["doc"], tp)
                 to_ret = []
                 for m in matches:
@@ -369,29 +376,28 @@ class MetaFunction():
                     except:
                         print("failed to load {}".format(m["_id"]))
                         continue
-                    print(loaded_f,file=sys.stdout)
+                    # print(loaded_f,file=sys.stdout)
                     score = self.test_as(loaded_f, fail_count=1, debug=False)
                     if score >= 1:
                         to_ret.append(loaded_f)
                 self.duplicates = to_ret
                 return to_ret
             else:
+                self.duplicates = []
                 return []
 
-    def optimize_run(self,k="average run time"):
+    def optimize(self,k="average run time"):
         dups = self.find_duplicates()
-        rank = sorted(dups,key=lambda x: x.analytics()[k])
-        print(rank)
-        if len(rank)>0 and rank[0].analytics()[k] < self.analytics()[k]:
-            print("Note: optimizing with {}".format(rank[0].__name__),file=sys.stderr)
-            selected = rank[0]
+        curr_time = round(self.analytics()[k]*1000,4)
+        rank = sorted([(d,round(d.analytics()[k]*1000,4)) for d in dups],key=lambda x: x[1])
+        if len(rank)>0 and rank[0][1] < curr_time:
+            print("Warning: optimizing {} with {}:\nSee: http://www.meta-lang.org/snippets/{}\nAverage time of {}ms vs. {}ms".format(self.__name__, rank[0][0].__name__, rank[0][0].__meta_id__, rank[0][1], curr_time),file=sys.stderr)
+            selected = rank[0][0].raw
         else:
             selected = self
         def opt(*args,**kwargs):
             return selected(*args,**kwargs)
         return opt
-
-
 
     def analytics(self):
         execution = self.meta.cache.id2execution(self.__meta_id__)

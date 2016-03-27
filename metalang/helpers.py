@@ -89,7 +89,7 @@ def filter_funcs_by_examples(funcs, examples):
 # normalize certain kinds of return values for equivalence testing
 def ret_normalize(r):
     if isinstance(r,dict):
-        return ("dict",sorted(dict(r)))
+        return ("dict", sorted(dict(r)))
     else:
         return r
 
