@@ -11,4 +11,5 @@ test/test_complex_lib_load.py
 test/test_load.py
 test/test_optimize.py
 test/test_runtime_asymp.py
+test/test_show_search.py
 test/test_typing.py

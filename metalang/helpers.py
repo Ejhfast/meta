@@ -10,9 +10,9 @@ import re
 
 # list all imported modules, doesn't work with "as" or "from"
 # optionally filter by their presence in src
-def list_imports(src=None):
+def list_imports(globals, src=None):
     imps = set()
-    for name, val in globals().items():
+    for name, val in globals.items():
         if isinstance(val, types.ModuleType):
             name = val.__name__
             if src:
@@ -22,6 +22,10 @@ def list_imports(src=None):
                     continue
             imps.add(name)
     return list(imps)
+
+def str_to_bool(s):
+    if s == "True": return True
+    return False
 
 # see if meta function is currently undefined
 def is_func_undefined(source : str) -> bool:
@@ -90,6 +94,11 @@ def filter_funcs_by_examples(funcs, examples):
 def ret_normalize(r):
     if isinstance(r,dict):
         return ("dict", sorted(dict(r)))
+    elif isinstance(r,np.ndarray):
+        try:
+            return list(r)
+        except:
+            return r
     else:
         return r
 

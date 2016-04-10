@@ -2,7 +2,7 @@ from context import Meta
 from collections import Counter
 import numpy
 
-meta = Meta()
+meta = Meta(overhead=True)
 
 @meta("add two numbers")
 def add_numbers(x,y):
@@ -37,6 +37,9 @@ fibonacci = meta.search("fibonacci")
 
 print("fibonacci(3) = {}".format(fibonacci(3)))
 
+for _ in range(0,1000):
+    fibonacci(22)
+
 print("duplicates", fibonacci.find_duplicates())
 
 try: fibonacci("s")
@@ -46,4 +49,9 @@ print("bugs",fibonacci.bugs())
 
 create_dict_from_object = meta.load("http://meta-lang.org/snippet/56ee4528c0cb8f7470fbafa6")
 
-print(create_dict_from_object(fibonacci))
+print(create_dict_from_object(meta))
+
+print(meta.overhead_call)
+print(meta.overhead_load)
+
+meta.measure_overhead()

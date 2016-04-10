@@ -3,6 +3,7 @@ import inspect
 import dill
 import getpass
 import numpy as np
+from scipy.stats import ttest_ind
 from datetime import datetime
 from collections import defaultdict,Counter
 from bson.objectid import ObjectId
@@ -80,12 +81,19 @@ class WebCache:
 
 class Meta:
 
-    def __init__(self, userid="global", user=None, sandbox=False, debug=False, backend_url="https://meta-backend.herokuapp.com"):
+    def __init__(self, userid="global", user=None, sandbox=False, debug=False, max_obj_size=20000, backend_url="https://meta-backend.herokuapp.com", overhead=False, globals=globals()):
         self.cache = WebCache(backend_url)
+        self.globals = globals
         self.__framework_test__ = sandbox
         self.debug = debug
+        self.overhead = overhead
+        self.overhead_call = []
+        self.overhead_load = []
+        self.overhead_create = []
+        self.max_obj_size = max_obj_size
+        self.overhead_begintime = time.clock()
         self.optimize = bool(os.environ.get("OPT", False))
-        self.backoff = bool(os.environ.get("AUTO_PATCH", False))
+        self.backoff = util.str_to_bool(os.environ.get("AUTO_PATCH", False))
         if user:
             self.user = user
         else:
@@ -94,6 +102,8 @@ class Meta:
     def bind(self,id,imports=[]):
         def bind_decorator(func):
             def func_wrapper(*args, **kwargs):
+                t_overhead1 = time.clock()
+                instrumented = False
                 try:
                     t1 = time.clock()
                     v = func(*args, **kwargs)
@@ -105,26 +115,33 @@ class Meta:
                     self.cache.record_bug(bad_input)
                     raise e
                 if random.randint(0,func_wrapper.called) == 0:
+                    instrumented = True
                     params = tuple(list(args)+[v])
                     sig = " -> ".join([util.pp_type(x) for x in util.fancy_type(params).__tuple_params__])
                     # args_ = [a if type(a).__name__ != 'generator' else type(a) for a in args]
                     # v_ = v if type(v).__name__ != 'generator' else type(v)
-                    runtime = {"snippet_id":id, "call":Binary(dill.dumps((args,v))),"time_running":t2-t1,"file":__file__,
-                           "user":self.user,"time":datetime.now(),"type":sig, "imports":imports}
-                    self.cache.record_call(runtime)
+                    #if sys.getsizeof(args) < self.max_obj_size and sys.getsizeof(v) < self.max_obj_size and not type(v).__name__ == 'generator':
+                    if not type(v).__name__ == 'generator':
+                        runtime = {"snippet_id":id, "call":Binary(dill.dumps((args,v))),"time_running":t2-t1,"file":__file__,
+                               "user":self.user,"time":datetime.now(),"type":sig, "imports":imports}
+                        if sys.getsizeof(runtime["call"]) < self.max_obj_size:
+                            self.cache.record_call(runtime)
                 func_wrapper.called += 1
+                t_overhead2 = time.clock()
+                if self.overhead: self.overhead_call.append({"id":id,"meta_time":t_overhead2-t_overhead1,"normal_time":t2-t1, "inst":instrumented})
                 return v
             func_wrapper.called = 0
             return func_wrapper
         return bind_decorator
 
 
-    def __call__(self, d_str, imports=None, parent=None):
+    def __call__(self, d_str=None, imports=None, parent=None):
         def real_dec(func):
+            t_overhead1 = time.clock()
             imports_copy = imports
             src = "".join(inspect.getsourcelines(func)[0][1:])
             if imports_copy == None:
-                imports_copy = util.list_imports(src)
+                imports_copy = util.list_imports(self.globals,src)
             f_name = func.__name__
             is_undef = util.is_func_undefined(src)
             annote = {k:util.pp_type(v) for k,v in func.__annotations__.items()}
@@ -148,11 +165,48 @@ class Meta:
                 id_ = func.__meta_id__
             snippet_data["func"] = func
             inner = MetaFunction(id_, self)#, snippet_data)
+            t_overhead2 = time.clock()
+            if self.overhead: self.overhead_create.append(t_overhead2-t_overhead1)
             return inner
         return real_dec
 
+    def measure_overhead(self):
+        overhead_endtime = time.clock()
+        len_load = len(self.overhead_load)
+        len_create = len(self.overhead_create)
+        sum_load = np.sum(self.overhead_load)
+        avg_load = np.average(self.overhead_load)
+        avg_create = np.average(self.overhead_create)
+        sum_create = np.sum(self.overhead_create)
+        len_calls = len(self.overhead_call)
+        sum_inst_call = np.sum([x["meta_time"] for x in self.overhead_call if x["inst"]])
+        sum_inst_baseline = np.sum([x["normal_time"] for x in self.overhead_call if x["inst"]])
+        len_inst = len([x for x in self.overhead_call if x["inst"]])
+        sum_meta_call = np.sum([x["meta_time"] for x in self.overhead_call])
+        sum_normal_call = np.sum([x["normal_time"] for x in self.overhead_call])
+        total_unadjusted = overhead_endtime - self.overhead_begintime
+        print(total_unadjusted,"total")
+        meta_total = total_unadjusted - sum_normal_call
+        normal_total = total_unadjusted - sum_load - sum_meta_call - sum_create
+        print(meta_total, normal_total)
+        print("{} overall overhead".format(meta_total/normal_total))
+        print("{} functions loaded and {} created and {} called".format(len_load, len_create, len_calls))
+        print("{} overhead per meta call".format((sum_inst_call - sum_inst_baseline)/len_inst))
+        print("call overhead as percent {}".format((sum_meta_call - sum_normal_call) / meta_total))
+        print("{} overhead per prob meta call".format((sum_meta_call - sum_normal_call)/len_calls))
+        print("{} avg load time".format(avg_load))
+        print("{} avg create time".format(avg_create))
+        data_out = [total_unadjusted, meta_total / normal_total, len_load, len_create, len_calls, ((sum_meta_call - sum_normal_call)/len_calls), avg_load, avg_create, meta_total, normal_total, (sum_meta_call - sum_normal_call), sum_load, sum_create]
+        with open("overhead2.tsv", "a") as myfile:
+            myfile.write("\t".join([str(x) for x in data_out])+"\n")
+
+
     def load(self, id_: str, test=False, instrument=True):
-        return MetaFunction(id_, self)
+        t_overhead1 = time.clock()
+        mf = MetaFunction(id_, self)
+        t_overhead2 = time.clock()
+        if self.overhead: self.overhead_load.append(t_overhead2-t_overhead1)
+        return mf
 
     def load_multiple(self, ids):
         snippets = self.cache.get_ids(ids)
@@ -328,15 +382,15 @@ class MetaFunction():
                 return self.__meta_dynamic_type__
 
     def test_as(self, other_meta_func, debug=False, fail_count=float("inf"), io_skip=False):
-        # ex1, ex2 = [self.meta.cache.id2execution(x.__meta_id__) for x in [self,other_meta_func]]
+        #ex1, ex2 = [self.meta.cache.id2execution(x.__meta_id__) for x in [self,other_meta_func]]
         exs = self.meta.cache.id2execution(self.__meta_id__)
-        execution = set([x["call"] for x in exs])#list(ex1)+list(ex2)])
+        execution = set([x["call"] for x in exs]) #list(ex1)+list(ex2)])
         if len(execution) == 0:
             return 0
         pass_, fail_ = 0.0, 0.0
         try:
-            func_1 = timeout_dumb(2)(dill.dumps(self.sandbox_io,recurse=True))
-            func_2 = timeout_dumb(2)(dill.dumps(other_meta_func.sandbox_io,recurse=True))
+            func_1 = timeout_dumb(2)(dill.dumps(self.raw,recurse=True))
+            func_2 = timeout_dumb(2)(dill.dumps(other_meta_func.raw,recurse=True))
         except Exception as e:
             print(e,file=sys.stderr)
             return 0
@@ -386,7 +440,7 @@ class MetaFunction():
                     except:
                         print("failed to load {}".format(m["_id"]))
                         continue
-                    # print(loaded_f,file=sys.stdout)
+                    print(loaded_f,file=sys.stdout)
                     score = self.test_as(loaded_f, fail_count=1, debug=False)
                     if score >= 1:
                         to_ret.append(loaded_f)
@@ -408,6 +462,34 @@ class MetaFunction():
         def opt(*args,**kwargs):
             return selected(*args,**kwargs)
         return opt
+
+    def optimize2(self, n_inputs=10, n_times=10, p_cutoff=0.05):
+        dups = self.find_duplicates()
+        # can make this more efficient
+        all_inputs = [util.safe_load(x)[0] for x in set([x["call"] for x in self.meta.cache.id2execution(self.__meta_id__)])]
+        test_inputs = random.sample([x for x in all_inputs if x != None], min(n_inputs,len(all_inputs)))
+        self_times = self.time_on_inputs(test_inputs, n_times).flatten()
+        self_average = np.average(self_times)
+        out = []
+        print(dups)
+        for d in dups:
+            d_times = d.time_on_inputs(test_inputs, n_times).flatten()
+            d_average = np.average(d_times)
+            print(self_average,d_average)
+            if d_average < self_average:
+                # print(self_average / d_average)
+                # _, pval = ttest_ind(self_times, d_times)
+                # if pval < 0.05:
+                out.append([d, self_average / d_average])
+        return out
+
+    def time_on_inputs(self, inputs, n=10):
+        times_per_input = []
+        for i in inputs:
+            timed_func = util.timing(self.raw)
+            times = [timed_func(*i)[0] for _ in range(0,n)]
+            times_per_input.append(times)
+        return np.array(times_per_input)
 
     def analytics(self):
         execution = self.meta.cache.id2execution(self.__meta_id__)

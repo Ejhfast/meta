@@ -1,6 +1,6 @@
 from context import Meta
 
-meta = Meta()
+meta = Meta(overhead=True)
 
 # we need to put complex stuff in here :(
 
@@ -15,5 +15,11 @@ print(make_vectorizer.__meta_id__)
 print(make_vectorizer.__meta_source__)
 
 vecs = make_vectorizer(["hello there","yeah that is right"],1)
+vecs = make_vectorizer(["hello there","yeah that is right"],1)
+vecs = make_vectorizer(["hello there","yeah that is right"],1)
+vecs = make_vectorizer(["hello there","yeah that is right"],1)
 
 print(vecs["vectorizer"])
+
+print(meta.overhead_call)
+print(meta.overhead_load)
