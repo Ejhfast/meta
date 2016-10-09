@@ -39,6 +39,7 @@ def fancy_type(o):
     elif type(o) == type(()):
         return Tuple[tuple([fancy_type(t_) for t_ in o])]
     elif type(o) == type({}):
+        return Dict[Any,Any]
         if not o:
             return Dict[Any,Any]
         return Dict[Union[tuple([fancy_type(t_) for t_ in o.keys()])],Union[tuple([fancy_type(t_) for t_ in o.values()])]]
@@ -138,9 +139,9 @@ def type_to_string(params, __expand__=True):
     p_sig = []
     for s in expanded:
         if type(s) == type(Tuple):
-            print(s)
+            #print(s)
             p_sig.append(" -> ".join([pp_type(x) for x in s.__tuple_params__]))
-            print(p_sig[-1])
+            #print(p_sig[-1])
     return p_sig
 
 # time a function and prepend time to return value

@@ -440,7 +440,7 @@ class MetaFunction():
                     except:
                         print("failed to load {}".format(m["_id"]))
                         continue
-                    print(loaded_f,file=sys.stdout)
+                    #print(loaded_f,file=sys.stdout)
                     score = self.test_as(loaded_f, fail_count=1, debug=False)
                     if score >= 1:
                         to_ret.append(loaded_f)
@@ -498,9 +498,22 @@ class MetaFunction():
         sorted_exe = sorted(execution,key=lambda x: x["time"],reverse=True)
         all_rets = [util.safe_load(x["call"]) for x in sorted_exe]
         all_types = Counter([util.fancy_type(x) for x in all_rets])
-        last_ten = all_rets[:10]
+        last_ten = [{"input":x[0], "output": x[1]} for x in all_rets[:10]]
         self.meta.cache.update_snippet(self.__meta_id__,{"avg_time":avg_time})
         return {"average run time":avg_time, "recent_calls":last_ten, "types":all_types}
+
+    def examples(self):
+        return self.analytics()["recent_calls"]
+
+    def url(self):
+        return "http://www.meta-lang.org/snippets/{}".format(self.__meta_id__)
+
+    def get_type(self):
+        def replace_any(x):
+            return x.replace("[Any, Any]","").replace("[Any]","")
+        self.get_dynamic_type_sig()
+        return [replace_any(x) for x in self.__meta_for_inference__]
+        #return self.__meta_dynamic_type__
 
     def bugs(self):
         bugs = self.meta.cache.id2bugs(self.__meta_id__)
