@@ -2,7 +2,7 @@ from distutils.core import setup
 setup(
   name = 'metalang',
   packages = ['metalang'], # this must be the same as the name above
-  version = '0.48a',
+  version = '0.49',
   description = 'A domain specific language that enables powerful code sharing',
   author = 'Ethan Fast',
   author_email = 'ejhfast@gmail.com',
