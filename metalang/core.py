@@ -510,9 +510,9 @@ class MetaFunction():
 
     def get_type(self):
         def replace_any(x):
-            return x.replace("[Any, Any]","").replace("[Any]","")
+            return re.sub(r"\[[^\]]*\]","",x)
         self.get_dynamic_type_sig()
-        return [replace_any(x) for x in self.__meta_for_inference__]
+        return list(set([replace_any(x) for x in self.__meta_for_inference__]))
         #return self.__meta_dynamic_type__
 
     def bugs(self):

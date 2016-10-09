@@ -39,7 +39,7 @@ def fancy_type(o):
     elif type(o) == type(()):
         return Tuple[tuple([fancy_type(t_) for t_ in o])]
     elif type(o) == type({}):
-        return Dict[Any,Any]
+        #return Dict[Any,Any]
         if not o:
             return Dict[Any,Any]
         return Dict[Union[tuple([fancy_type(t_) for t_ in o.keys()])],Union[tuple([fancy_type(t_) for t_ in o.values()])]]
