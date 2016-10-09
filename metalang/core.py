@@ -81,11 +81,13 @@ class WebCache:
 
 class Meta:
 
-    def __init__(self, userid="global", user=None, sandbox=False, debug=False, max_obj_size=20000, backend_url="https://meta-backend.herokuapp.com", overhead=False, globals=globals()):
+    def __init__(self, userid="global", user=None, sandbox=False, debug=False, max_obj_size=20000, backend_url="https://meta-backend.herokuapp.com", overhead=False, globals=globals(), jupyter=False, inspect=inspect):
         self.cache = WebCache(backend_url)
         self.globals = globals
         self.__framework_test__ = sandbox
         self.debug = debug
+        self.jupyter = jupyter
+        self.inspect = inspect
         self.overhead = overhead
         self.overhead_call = []
         self.overhead_load = []
@@ -139,7 +141,7 @@ class Meta:
         def real_dec(func):
             t_overhead1 = time.clock()
             imports_copy = imports
-            src = "".join(inspect.getsourcelines(func)[0][1:])
+            src = "".join(self.inspect.getsourcelines(func)[0][1:])
             if imports_copy == None:
                 imports_copy = util.list_imports(self.globals,src)
             f_name = func.__name__
@@ -148,6 +150,10 @@ class Meta:
             arg_type = [annote[a] if a in annote else "*" for a in func.__code__.co_varnames]
             ret_type = annote["return"] if "return" in annote else "*"
             t_sig = " -> ".join(arg_type+[ret_type])
+            if self.jupyter:
+                file_data = "jupyter"
+            else:
+                file_data = sys.modules[func.__module__].__file__
             # possibly I want to mark when we're recording input fed to a magically shifted function
             snippet_data = {
                 "source":src, "imports":imports_copy,
@@ -155,7 +161,7 @@ class Meta:
                 "undefined":is_undef, "doc":d_str,
                 "parent":parent,
                 "created_at":datetime.now(),
-                "file":sys.modules[func.__module__].__file__,
+                "file":file_data,
                 "user":self.user,
             }
             id_ = self.cache.record_function(snippet_data)
