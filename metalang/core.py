@@ -3,7 +3,7 @@ import inspect
 import dill
 import getpass
 import numpy as np
-from scipy.stats import ttest_ind
+#from scipy.stats import ttest_ind
 from datetime import datetime
 from collections import defaultdict,Counter
 from bson.objectid import ObjectId
@@ -245,7 +245,7 @@ class Meta:
             odds = t1_avg / t2_avg
         else:
             odds = t2_avg / t1_avg
-        if ttest_ind(total_t1, total_t2)[1] < 0.05:
+        if True:#ttest_ind(total_t1, total_t2)[1] < 0.05:
             return (odds, t1_avg/len(inputs), t2_avg/len(inputs))
         else:
             return None
