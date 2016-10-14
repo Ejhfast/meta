@@ -352,7 +352,7 @@ class MetaFunction():
         if self.meta.__framework_test__:
             return self.instrument_sandbox(*args,**kwargs)
         if self.meta.backoff or self.__meta_backoff__:
-            self.find_duplicates()
+            self.find_equivalents()
             for d in [self]+self.duplicates:
                 try:
                     new_ret = d.instrument_f(*args,**kwargs)
@@ -429,7 +429,7 @@ class MetaFunction():
                 fail_ += 1.0
         return pass_ / (pass_ + fail_)
 
-    def find_duplicates(self):
+    def find_equivalents(self):
         if self.duplicates:
             return self.duplicates
         else:
@@ -457,7 +457,7 @@ class MetaFunction():
                 return []
 
     def optimize(self,k="average run time"):
-        dups = self.find_duplicates()
+        dups = self.find_equivalents()
         curr_time = round(self.analytics()[k]*1000,4)
         rank = sorted([(d,round(d.analytics()[k]*1000,4)) for d in dups],key=lambda x: x[1])
         if len(rank)>0 and rank[0][1] < curr_time:
@@ -470,7 +470,7 @@ class MetaFunction():
         return opt
 
     def optimize2(self, n_inputs=10, n_times=10, p_cutoff=0.05):
-        dups = self.find_duplicates()
+        dups = self.find_equivalents()
         # can make this more efficient
         all_inputs = [util.safe_load(x)[0] for x in set([x["call"] for x in self.meta.cache.id2execution(self.__meta_id__)])]
         test_inputs = random.sample([x for x in all_inputs if x != None], min(n_inputs,len(all_inputs)))
@@ -521,7 +521,7 @@ class MetaFunction():
         return list(set([replace_any(x) for x in self.__meta_for_inference__]))
         #return self.__meta_dynamic_type__
 
-    def bugs(self):
+    def exceptions(self):
         bugs = self.meta.cache.id2bugs(self.__meta_id__)
         out = []
         for b in bugs:
@@ -545,7 +545,7 @@ class MetaFunction():
                 c += 1
         return time_raw, time_meta
 
-    def backoff(self,pos=True):
+    def auto_patch(self,pos=True):
         self.__meta_backoff__ = pos
 
 class Test:
@@ -587,7 +587,7 @@ class Test:
                 f = self.meta.load(sid)
             except:
                 continue
-            dups = f.find_duplicates()
+            dups = f.find_equivalents()
             #print(sid)
             if len(dups) > 0:
                 print(sid,self.meta.cache.id2func(sid)["doc"])
